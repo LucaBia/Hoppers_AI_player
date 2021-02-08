@@ -18,6 +18,17 @@ class Hoppers(object):
                               [0, 0, 0, 0, 0, 0, 2, 2, 2, 2],
                               [0, 0, 0, 0, 0, 2, 2, 2, 2, 2]]
 
+        # self.current_state = [[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        #                       [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        #                       [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        #                       [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                       [0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
+        #                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                       [0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+        #                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 2]]
+
         self.playerOne = 1
         self.playerTwo = 2
         self.player_turn = self.playerOne
@@ -40,15 +51,6 @@ class Hoppers(object):
         # print("\n", " 0", "  1", "  2", "  3", "  4", "  5", "  6", "  7", "  8", "  9")
         print(board)
     
-    def board2(self, tablero):
-        board = PrettyTable()
-        board.hrules = 1
-        board.header = False
-        # board.padding_width = 0
-        board.add_rows(tablero)
-        # print("\n", " 0", "  1", "  2", "  3", "  4", "  5", "  6", "  7", "  8", "  9")
-        print(board)
-
 
     def corner_camps(self):
         self.playerOneCornerCamp = [(0,0), (1,0), (2,0), (3,0), (4,0),
@@ -65,7 +67,6 @@ class Hoppers(object):
     def next_turn(self):
         self.player_turn = 2 if self.player_turn == 1 else 1
 
-    # TODO -----------------------------------------------------
     def check_if_there_is_winner(self, board):
         p1v = [self.current_state[position[1]][position[0]] for position in self.playerOneCornerCamp]
         p2v = [self.current_state[position[1]][position[0]] for position in self.playerTwoCornerCamp]
@@ -114,28 +115,17 @@ class Hoppers(object):
     
     def playAIbot(self):
         movement_value, best_move = self.minimax(self.current_state, 1, self.player_turn)
-        # print(best_move)
         move_from = "{x},{y}".format(x=best_move[0][0], y=best_move[0][1])
         move_to = "{x},{y}".format(x=best_move[1][0], y=best_move[1][1])
         return move_from, move_to
-        # return best_move
 
-    def boardIA(self, boardI):
-        board = PrettyTable()
-        board.add_rows(self.current_state)
-        print(board)
-
-    def minimax(self, board, depth, maximising=True, alfa=float("-inf"), beta=float("inf")):
-        if self.check_if_there_is_winner(board):
+    def minimax(self, board, depth, player_value, alfa=float("-inf"), beta=float("inf")):
+        if self.check_if_there_is_winner(board) or depth == 0:
             return self.eval(board, self.player_turn), None
 
-        if depth == 0:
-            random_move = random.choice(self.get_possible_moves(board, self.player_turn))
-            return self.eval(board, self.player_turn), random_move
-
-        best_value = float("-inf") if maximising else float("inf")
+        best_value = float("-inf") if player_value == self.player_turn else float("inf")
         oponent = 2 if self.player_turn == 1 else 2
-        eval_player = self.player_turn if maximising else oponent
+        eval_player = self.player_turn if player_value == self.player_turn else oponent
         moves = self.get_possible_moves(board, eval_player)
         
         for move in moves:
@@ -145,23 +135,23 @@ class Hoppers(object):
             board[move[1][1]][move[1][0]] = piece_value
 
             # next_player = 2 if player_value == 1 else 2
-            movement_value, _ = self.minimax(board, depth - 1, not maximising, alfa, beta)
+            movement_value, _ = self.minimax(board, depth - 1, oponent, alfa, beta)
 
             # Move the piece back
             board[move[0][1]][move[0][0]] = piece_value
             board[move[1][1]][move[1][0]] = 0
 
-            if maximising and movement_value > best_value:
+            if player_value == self.player_turn and movement_value > best_value:
                 best_move = move
                 best_value = movement_value
                 alfa = max(alfa, best_value)
 
-            if not maximising and movement_value < best_value:
+            if not player_value == self.player_turn and movement_value < best_value:
                 best_move = move
                 best_value = movement_value
                 beta = min(beta, best_value)
 
-            if (beta <= alfa):
+            if (player_value == self.player_turn and alfa > beta) or (not player_value == self.player_turn and alfa < beta):
                 return best_value, best_move
 
         return best_value, best_move
@@ -194,19 +184,59 @@ class Hoppers(object):
         return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
         
 
-    def get_possible_moves(self, board, player_turn):
+    def get_possible_moves(self, board, player_turn, accumulated_moves = []):
         moves = []
         for y in range(len(board)):
             for x in range(len(board[y])):
-                if board[y][x] != player_turn: continue
+                if board[y][x] == player_turn:
 
-                actual_position = (x, y)
-                cardinals_coords = self.get_cardinals_coords(actual_position)
+                    actual_position = (x, y)
+                    cardinals_coords = self.get_cardinals_coords(actual_position)
 
-                for cardinal in cardinals_coords:
-                    if cardinals_coords[cardinal] and self.is_possible_movement(board, actual_position, cardinals_coords[cardinal]):
-                        moves.append((actual_position, cardinals_coords[cardinal]))
+                    for cardinal in cardinals_coords:
+                        if cardinals_coords[cardinal]:
+                            booln, n = self.is_possible_movement(board, actual_position, cardinals_coords[cardinal])
+                            if booln:
+                                moves.append((actual_position, cardinals_coords[cardinal], n))
+            
+        for move in moves:
+            if move not in accumulated_moves: 
+                accumulated_moves.append(move)
+                # Move piece
+                board[move[0][1]][move[0][0]] = 0
+                board[move[1][1]][move[1][0]] = player_turn
+
+                if n == 2 and self.check_if_can_jump(board, move[1]):
+                    next_moves = self.get_possible_moves(board, player_turn, accumulated_moves)
+                    
+                    for next_move in next_moves:
+                        if next_move not in moves: 
+                            if move[0] != next_move[1]:
+                                if next_move[2] == 2 and move[2] == 2:
+                                    moves.append((move[0], next_move[1], 0))
+
+                # Move the piece back
+                board[move[0][1]][move[0][0]] = player_turn
+                board[move[1][1]][move[1][0]] = 0
         return moves
+
+    def check_if_can_jump(self, board, position):
+        coords = self.get_cardinals_coords(position)
+        n1, ne1, e1, se1, s1, so1, o1, no1 = coords["n1"], coords["ne1"], coords["e1"], coords["se1"], coords["s1"], coords["so1"], coords["o1"], coords["no1"]
+        n2, ne2, e2, se2, s2, so2, o2, no2 = coords["n2"], coords["ne2"], coords["e2"], coords["se2"], coords["s2"], coords["so2"], coords["o2"], coords["no2"]
+
+        for coord in [n1, ne1, e1, se1, s1, so1, o1, no1]:
+            if  coord: 
+                if board[coord[1]][coord[0]] != 0:
+                    if coord == n1      and n2  and board[n2[1]][n2[0]] == 0:    return True
+                    elif coord == ne1   and ne2 and board[ne2[1]][ne2[0]] == 0:  return True
+                    elif coord == e1    and e2  and board[e2[1]][e2[0]] == 0:    return True
+                    elif coord == se1   and se2 and board[se2[1]][se2[0]] == 0:  return True
+                    elif coord == s1    and s2  and board[s2[1]][s2[0]] == 0:    return True
+                    elif coord == so1   and so2 and board[so2[1]][so2[0]] == 0:  return True
+                    elif coord == o1    and o2  and board[o2[1]][o2[0]] == 0:    return True
+                    elif coord == no1   and no2 and board[no2[1]][no2[0]] == 0:  return True
+        return False 
 
     def is_possible_movement(self, board, pfrom, to):
         coords = self.get_cardinals_coords(pfrom)
@@ -214,30 +244,30 @@ class Hoppers(object):
         n2, ne2, e2, se2, s2, so2, o2, no2 = coords["n2"], coords["ne2"], coords["e2"], coords["se2"], coords["s2"], coords["so2"], coords["o2"], coords["no2"]
 
         if board[to[1]][to[0]] != 0:
-            return False
+            return False, 0
 
         if to in [n1, ne1, e1, se1, s1, so1, o1, no1]:
-            return True
+            return True, 1
         elif to in [n2, ne2, e2, se2, s2, so2, o2, no2]:
             if to == n2 and board[n1[1]][n1[0]] != 0:
-                return True
+                return True, 2
             elif to == ne2 and board[ne1[1]][ne1[0]] != 0:
-                return True
+                return True, 2
             elif to == e2 and board[e1[1]][e1[0]] != 0:
-                return True
+                return True, 2
             elif to == se2 and board[se1[1]][se1[0]] != 0:
-                return True
+                return True, 2
             elif to == s2 and board[s1[1]][s1[0]] != 0:
-                return True
+                return True, 2
             elif to == so2 and board[so1[1]][so1[0]] != 0:
-                return True
+                return True, 2
             elif to == o2 and board[o1[1]][o1[0]] != 0:
-                return True
+                return True, 2
             elif to == no2 and board[no1[1]][no1[0]] != 0:
-                return True
+                return True, 2
             else:
-                return False
-        return False
+                return False, 0
+        return False, 0
 
     def get_cardinals_coords(self, position):
         n1 = (position[0], position[1] - 1)
@@ -273,7 +303,23 @@ class Hoppers(object):
         no2 = (position[0] - 2, position[1] - 2)
         no2 = None if no2[0] < 0 or no2[0] > 9 or no2[1] < 0 or no2[1] > 9 else no2
 
-        return {"n1": n1, "ne1": ne1, "e1": e1, "se1": se1, "s1": s1, "so1": so1, "o1": o1, "no1": no1, "n2": n2, "ne2": ne2, "e2": e2, "se2": se2, "s2": s2, "so2": so2, "o2": o2, "no2": no2}
+        return { "n1": n1,
+                 "ne1": ne1, 
+                 "e1": e1, 
+                 "se1": se1, 
+                 "s1": s1, 
+                 "so1": so1, 
+                 "o1": o1, 
+                 "no1": no1, 
+                 "n2": n2, 
+                 "ne2": ne2, 
+                 "e2": e2, 
+                 "se2": se2, 
+                 "s2": s2, 
+                 "so2": so2, 
+                 "o2": o2, 
+                 "no2": no2
+                }
 
 
 
