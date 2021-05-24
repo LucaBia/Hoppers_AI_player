@@ -2,10 +2,12 @@
 
 from prettytable import PrettyTable
 import numpy
+import xmltodict
+import json
 
 
 class Hoppers(object):
-    def __init__(self, playerOneIsBot = False, playerTwoIsBot = False):
+    def __init__(self, playerOneIsBot = False, playerTwoIsBot = False, bot1Level=1, bot2Level=1):
         # Tablero 10 x 10
         self.current_state = [[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
                               [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
@@ -23,6 +25,8 @@ class Hoppers(object):
         self.player_turn = self.playerOne
         self.playerOneIsBot = playerOneIsBot
         self.playerTwoIsBot = playerTwoIsBot
+        self.bot1Level = bot1Level
+        self.bot2Level = bot2Level
 
         # Lista de coordenadas en donde estan las piezas de los jugadores 
         self.playerOneCornerCamp = []
@@ -59,6 +63,8 @@ class Hoppers(object):
     def check_if_there_is_winner(self, board):
         p1v = [self.current_state[position[1]][position[0]] for position in self.playerOneCornerCamp]
         p2v = [self.current_state[position[1]][position[0]] for position in self.playerTwoCornerCamp]
+        # print("P1V: ", p1v)
+        # print("P2V: ", p2v)
 
         if 1 in p2v and 0 not in p2v:
             print("El jugador 1 ha ganado")
@@ -90,7 +96,25 @@ class Hoppers(object):
                 print("Jugador 2: ")
 
             if (self.player_turn == 1 and self.playerOneIsBot) or (self.player_turn == 2 and self.playerTwoIsBot) :
-                player_piece_move, player_coords_move = self.playAIbot()
+                if (self.player_turn == 1):
+                    # player_piece_move, player_coords_move = self.playAIbot(self.bot1Level)
+                    move = self.playAIbot(self.bot1Level)
+
+                else:
+                    # player_piece_move, player_coords_move = self.playAIbot(self.bot2Level)
+                    move = self.playAIbot(self.bot2Level)
+                
+                # player_piece_move = xmltodict.parse(move)
+
+                move = json.loads(json.dumps(dict(xmltodict.parse(move, process_namespaces=True))))
+                x_ppm = move['move']['from']['@row']
+                y_ppm = move['move']['from']['@col']
+                player_piece_move = "" + x_ppm + "," + y_ppm
+
+                x_pcm = move['move']['to']['@row']
+                y_pcm = move['move']['to']['@col']
+                player_coords_move = "" + x_pcm + "," + y_pcm
+                    
             else:
                 player_piece_move = input("Ingrese las coordenadas (x,y) de la pieza a mover: ")
                 player_coords_move = input("Ingrese las coordenadas (x,y) donde desea mover: ")
@@ -263,7 +287,7 @@ class Hoppers(object):
                         if cardinal:
                             booln, n = self.can_make_movement(board, actual_position, cardinal)
                             if booln:
-                                moves.append((actual_position, cardinal, n))
+                                moves.append((actual_position, cardinal, n, [actual_position, cardinal]))
             
         for move in moves:
             if move not in all_moves: 
@@ -277,7 +301,9 @@ class Hoppers(object):
                         if next_move not in moves: 
                             if move[0] != next_move[1]:
                                 if next_move[2] == 2 and move[2] == 2:
-                                    moves.append((move[0], next_move[1], 0))
+                                    # print("----------PATH DE 3------------")
+                                    # print(move[0], next_move[1], 0, [move[0], next_move[0], next_move[1]])
+                                    moves.append((move[0], next_move[1], 0, [move[0], next_move[0], next_move[1]]))
 
                 board[move[0][1]][move[0][0]] = player_turn
                 board[move[1][1]][move[1][0]] = 0
@@ -329,22 +355,46 @@ class Hoppers(object):
 
         return best_value, best_move
 
-    def playAIbot(self):
-        _, best_move = self.minimax(self.current_state, 1, self.player_turn)
+    def playAIbot(self, botLevel):
+        _, best_move = self.minimax(self.current_state, botLevel, self.player_turn)
         move_from = "{x},{y}".format(x=best_move[0][0], y=best_move[0][1])
         move_to = "{x},{y}".format(x=best_move[1][0], y=best_move[1][1])
-        package = {
-            "from: ": best_move[0],
-            "to: ": best_move[1],
-            "path": []
+        # package = {
+        #     "from: ": best_move[0],
+        #     "to: ": best_move[1],
+        #     "path": best_move[3]
+        # }
+
+        paths = []
+        for position in best_move[3]:
+            paths.append({
+                '@row': position[0],
+                '@col': position[1]
+            })
+
+        xml = {
+            'move': {
+                'from': {
+                    '@row': best_move[0][0],
+                    '@col': best_move[0][1]
+                },
+                'to': {
+                    '@row': best_move[1][0],
+                    '@col': best_move[1][1]
+                },
+                'path': {
+                    'pos': paths
+                }
+            }
         }
-        print(package)
-        return move_from, move_to
+        print(xmltodict.unparse(xml, pretty = True))
+        # print(package)
+        return xmltodict.unparse(xml, pretty = True)
 
 
 
 
-Hoppers(True, True)
+Hoppers(True, True, 1, 3)
 
         
         
