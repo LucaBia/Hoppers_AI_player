@@ -7,7 +7,7 @@ import json
 
 
 class Hoppers(object):
-    def __init__(self, playerOneIsBot = False, playerTwoIsBot = False, bot1Level=1, bot2Level=1):
+    def __init__(self, myValue, playerOneIsBot = False, playerTwoIsBot = False, bot1Level=1, bot2Level=1):
         # Tablero 10 x 10
         self.current_state = [[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
                               [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
@@ -30,6 +30,8 @@ class Hoppers(object):
 
         self.lastMovePiece = None
         self.lastMoveCoords = None
+
+        self.myValue = 0
 
         # Lista de coordenadas en donde estan las piezas de los jugadores 
         self.playerOneCornerCamp = []
