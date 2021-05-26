@@ -28,12 +28,15 @@ class Hoppers(object):
         self.bot1Level = bot1Level
         self.bot2Level = bot2Level
 
+        self.lastMovePiece = None
+        self.lastMoveCoords = None
+
         # Lista de coordenadas en donde estan las piezas de los jugadores 
         self.playerOneCornerCamp = []
         self.playerTwoCornerCamp = []
         self.corner_camps()
 
-        self.game()
+        # self.game()
     
     def board(self):
         board = PrettyTable()
@@ -80,48 +83,41 @@ class Hoppers(object):
         x, y = int(x), int(y)
         return (x, y)
 
-    def move_piece(self, from_, to):
+    def move_piece(self, from_, to, player):
         from_ = self.toTuple(from_)
         to = self.toTuple(to)
         self.current_state[from_[1]][from_[0]] = 0
-        self.current_state[to[1]][to[0]] = self.player_turn
+        self.current_state[to[1]][to[0]] = player
 
-    def game(self):
-        self.board()
+    # def game(self):
+    #     self.board()
 
-        while not self.check_if_there_is_winner(self.current_state):
-            if self.player_turn == self.playerOne:
-                print("Jugador 1: ")
-            else:
-                print("Jugador 2: ")
+    #     while not self.check_if_there_is_winner(self.current_state):
+    #         if self.player_turn == self.playerOne:
+    #             print("Jugador 1: ")
+    #         else:
+    #             print("Jugador 2: ")
 
-            if (self.player_turn == 1 and self.playerOneIsBot) or (self.player_turn == 2 and self.playerTwoIsBot) :
-                if (self.player_turn == 1):
-                    # player_piece_move, player_coords_move = self.playAIbot(self.bot1Level)
-                    move = self.playAIbot(self.bot1Level)
+    #         if (self.player_turn == 1 and self.playerOneIsBot) or (self.player_turn == 2 and self.playerTwoIsBot) :
+    #             if (self.player_turn == 1):
+    #                 # player_piece_move, player_coords_move = self.playAIbot(self.bot1Level)
+    #                 self.playAIbot(self.bot1Level, self.lastMovePiece, self.lastMoveCoords)
 
-                else:
-                    # player_piece_move, player_coords_move = self.playAIbot(self.bot2Level)
-                    move = self.playAIbot(self.bot2Level)
+    #             else:
+    #                 # player_piece_move, player_coords_move = self.playAIbot(self.bot2Level)
+    #                 self.playAIbot(self.bot2Level, self.lastMovePiece, self.lastMoveCoords)
                 
-                # player_piece_move = xmltodict.parse(move)
+    #             # player_piece_move = xmltodict.parse(move)
 
-                move = json.loads(json.dumps(dict(xmltodict.parse(move, process_namespaces=True))))
-                x_ppm = move['move']['from']['@row']
-                y_ppm = move['move']['from']['@col']
-                player_piece_move = "" + x_ppm + "," + y_ppm
-
-                x_pcm = move['move']['to']['@row']
-                y_pcm = move['move']['to']['@col']
-                player_coords_move = "" + x_pcm + "," + y_pcm
+                
                     
-            else:
-                player_piece_move = input("Ingrese las coordenadas (x,y) de la pieza a mover: ")
-                player_coords_move = input("Ingrese las coordenadas (x,y) donde desea mover: ")
-            
-            self.move_piece(player_piece_move, player_coords_move)
-            self.next_turn()
-            self.board()
+    #         else:
+    #             player_piece_move = input("Ingrese las coordenadas (x,y) de la pieza a mover: ")
+    #             player_coords_move = input("Ingrese las coordenadas (x,y) donde desea mover: ")
+    #             # self.move_piece(player_piece_move, player_coords_move)
+
+    #         self.next_turn()
+    #         self.board()
     
     # From here minimax functions begin
     def hypotenuse (self, a, b):
@@ -355,10 +351,42 @@ class Hoppers(object):
 
         return best_value, best_move
 
-    def playAIbot(self, botLevel):
+    def playAIbot(self, moveXML):
+        if (self.player_turn == self.playerOne):
+            botLevel = self.bot1Level
+        else:
+            botLevel = self.bot2Level
+
+        if (moveXML):
+            move = json.loads(json.dumps(dict(xmltodict.parse(moveXML, process_namespaces=True))))
+            x_ppm = move['move']['from']['@row']
+            y_ppm = move['move']['from']['@col']
+            player_piece_move = "" + x_ppm + "," + y_ppm
+
+            x_pcm = move['move']['to']['@row']
+            y_pcm = move['move']['to']['@col']
+            player_coords_move = "" + x_pcm + "," + y_pcm
+
+            if (player_piece_move and player_coords_move):
+                if (self.player_turn == 1):
+                    rival = 2
+                else:
+                    rival = 1
+                self.move_piece(player_piece_move, player_coords_move, rival)
+                self.lastMovePiece = None
+                self.lastMoveCoords = None
+
         _, best_move = self.minimax(self.current_state, botLevel, self.player_turn)
+
+        # self.lastMovePiece = best_move[0]
+        # self.lastMoveCoords = best_move[1]
+
         move_from = "{x},{y}".format(x=best_move[0][0], y=best_move[0][1])
         move_to = "{x},{y}".format(x=best_move[1][0], y=best_move[1][1])
+
+
+        self.move_piece(move_from, move_to, self.player_turn)
+
         # package = {
         #     "from: ": best_move[0],
         #     "to: ": best_move[1],
@@ -387,14 +415,10 @@ class Hoppers(object):
                 }
             }
         }
-        print(xmltodict.unparse(xml, pretty = True))
-        # print(package)
+        print(xmltodict.unparse(xml, pretty = True, short_empty_elements=True))
         return xmltodict.unparse(xml, pretty = True)
 
 
-
-
-Hoppers(True, True, 1, 3)
 
         
         
