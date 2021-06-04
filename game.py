@@ -1,7 +1,7 @@
 from hoppers import *
 
 # AI vs Jugador
-# hoppers = Hoppers(True, False, 1, None)
+# hoppers = Hoppers(True, False, 3, None)
 # hoppers.game()
 
 # AI vs AI
